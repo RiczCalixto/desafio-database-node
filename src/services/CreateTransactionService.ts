@@ -10,7 +10,7 @@ interface TransactionDTO {
   title: string;
   value: number;
   type: 'income' | 'outcome';
-  category: string;
+  categoryName: string;
 }
 
 class CreateTransactionService {
@@ -20,7 +20,7 @@ class CreateTransactionService {
     title,
     value,
     type,
-    category,
+    categoryName,
   }: TransactionDTO): Promise<Transaction> {
     const isOutcome = type === 'outcome';
     const transactionsRepository = getCustomRepository(TransactionsRepository);
@@ -32,16 +32,18 @@ class CreateTransactionService {
     if (!isValidType) throw new AppError('Invalid type.');
 
     if (isOutcome && !hasEnoughMoney) throw new AppError('Not enough money.');
+    // Não tratar como erro (exception) o que é regra de negócio.
+    // Retornar um objeto para ser utilizado na camada de apresentação - ex: flash message.
 
-    const { id } = await this.createCategoryService.execute({
-      title: category,
+    const category = await this.createCategoryService.execute({
+      title: categoryName,
     });
 
     const transaction = transactionsRepository.create({
       title,
       value,
       type,
-      category_id: id,
+      category,
     });
 
     await transactionsRepository.save(transaction);

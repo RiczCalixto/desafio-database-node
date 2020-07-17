@@ -4,10 +4,12 @@ import { CreateCategoryService } from '../services/CreateCategoryService';
 import { getCustomRepository } from 'typeorm';
 import TransactionsRepository from '../repositories/TransactionsRepository';
 import DeleteTransactionService from '../services/DeleteTransactionService';
-
-// import ImportTransactionsService from '../services/ImportTransactionsService';
+import ImportTransactionsService from '../services/ImportTransactionsService';
+import uploadConfig from '../config/upload';
+import multer from 'multer';
 
 const transactionsRouter = Router();
+const upload = multer(uploadConfig);
 
 transactionsRouter.get('/', async (request, response) => {
   const transactionRepository = getCustomRepository(TransactionsRepository);
@@ -17,7 +19,7 @@ transactionsRouter.get('/', async (request, response) => {
 });
 
 transactionsRouter.post('/', async (request, response) => {
-  const { title, value, type, category } = request.body;
+  const { title, value, type, category: categoryName } = request.body;
   const createCategoryService = new CreateCategoryService();
   const createTransactionService = new CreateTransactionService(
     createCategoryService,
@@ -26,7 +28,7 @@ transactionsRouter.post('/', async (request, response) => {
     title,
     value,
     type,
-    category,
+    categoryName,
   });
 
   return response.json(transaction);
@@ -40,8 +42,17 @@ transactionsRouter.delete('/:id', async (request, response) => {
   return response.status(204).json({});
 });
 
-transactionsRouter.post('/import', async (request, response) => {
-  // TODO
-});
+transactionsRouter.post(
+  '/import',
+  upload.single('file'),
+  async (request, response) => {
+    const importTransactionsService = new ImportTransactionsService();
+    const csvTransactions = await importTransactionsService.execute(
+      request.file.path,
+    );
+
+    return response.json(csvTransactions);
+  },
+);
 
 export default transactionsRouter;
